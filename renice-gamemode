@@ -1,0 +1,23 @@
+#!/bin/bash
+
+# Run game with dGPU
+gamemoderun "$@" &
+GAMEMODE_PID=$!
+
+# Log game PID numbers
+: > /tmp/renice-gamemode-pid.log
+sleep 15
+while kill -0 "$GAMEMODE_PID" 2>/dev/null; do
+    GAME_PIDS=$(pgrep -P "$GAMEMODE_PID")
+    > /tmp/renice-gamemode-pid.log
+    for PID in $GAME_PIDS; do
+        if kill -0 "$PID" 2>/dev/null; then
+            current_nice=$(ps -o nice= -p "$PID" | tr -d ' ')
+            if [[ -n "$current_nice" && "$current_nice" != "-" && "$current_nice" =~ [0-9] ]]; then
+                echo "$PID" >> /tmp/renice-gamemode-pid.log
+                sleep 0.5
+            fi
+        fi
+    done
+    sleep 30
+done
